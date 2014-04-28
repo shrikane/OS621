@@ -5,7 +5,8 @@
 -module(readseg).
 -export([generatelist/2]).
 
-generatelist(FilePath, Destination)->    
+generatelist(FilePath, Destination)-> 
+	io:format("Deleting Destination: ~p~n if exists",[Destination]),
        file:delete(Destination),
 	io:format("reading from ~p~n",[FilePath]),
     {ok, Filenames} = file:list_dir(FilePath),
@@ -19,7 +20,8 @@ generatelist(FilePath, Destination)->
 		       io:format("~p~n",[Lines]),
 					   file:write_file(Destination,io_lib:fwrite("~p,",[Lines]),[append])
 					   end
-	  ).
+	  ),
+	  io:format("Files in ~p have been read and stored into ~p", [FilePath, Destination]).
     
     
 for(Max, Max, F) ->
