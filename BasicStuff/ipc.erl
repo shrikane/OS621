@@ -1,52 +1,108 @@
 %Author: Anuja
-%Functionality: generic function to calculate min or max of values
+%Functionality: Min-Max Calculation
+ 
 -module(ipc).
--export([start/0, p1/1 , p2/1, calculate/0]).
+-import(dict).
+-export([start/0, threadoperation/2, calculate/0]).
 
+initialise([Pidlist]) ->
+	lists:foreach(fun(Pid) -> Pid ! initialise end, Pidlist).	       		      
 
-p1(PIDS)-> 
-receive
-	Val1 ->
-	     %io:format("In p1: Received Value ~p ~n", [Val1]),
-	     Val2 = 1.333,
-	     %io:format("Now Sending value ~p ~n", [Val2]),
-	     lists:foreach(fun(Pid) -> Pid ! Val2 end, PIDS),
-	     er_calculate ! {self(), min, Val1, Val2}
-end.
+threadoperation([Pids], Myvalue) ->
+	receive 
+		initialise ->	
+			%io:format("Initialising ~p ~n",[self()]),
+			put("min",[Myvalue]),
+			put("max",[Myvalue]),
+			threadoperation([Pids], Myvalue);
+		{calculate,Function, Value} ->
+	      		er_calculate ! {self(), Function, Myvalue, Value},
+	      		lists:foreach(fun(Pid) -> Pid ! {calculate,Function,Myvalue} end, Pids),
+	      		threadoperation([Pids],Myvalue);
+		{update, Function, Value} ->
+			% io:format("~p: Got updated value: ~p", [self(),Value]),
+			 erase(Function),
+			 put(Function, Value),
+			 threadoperation([Pids], get(Function))		      	  
+				     					
+	end.
 
-p2(PIDS)-> 
-Val1 = 1.3334,
-lists:foreach(fun(Pid) -> Pid ! Val1 end, PIDS),
-receive
-	
-	Val ->
-	   %io:format("In p2: Received Value ~p ~n ", [Val]),
-	   er_calculate ! {self(), min, Val1, Val}
-	   
-end.
 
 calculate() ->
-	  %  io:format("In calculate function");
+	  
 receive
-	start ->
-	      io:format("Received start ~n");
+	%start ->
+	  %    io:format("Received start ~n");
 	{Pid_proc, Function,Val1, Val2} ->
-		io:format(" Received message from ~p. Function is ~p. VLalues are ~p ~p ~n", [Pid_proc, Function, Val1, Val2]),
+		%io:format(" Received message from ~p. Function is ~p. VLalues are ~p ~p ~n", [Pid_proc, Function, Val1, Val2]),
 		case Function of 
 	  	  min -> 
-		     	 Min = erlang:min(Val1, Val2),
-		  	 io:format("Minimum value for ~p is ~p ~n", [Pid_proc, Min]);
+		     	 Min = erlang:min(Val1, Val2), 	 
+			 io:format("Minimum value at ~p is ~p ~n", [Pid_proc, Min]),
+			 Pid_proc ! {update, Function, [Min]};
 	   	  max -> 
-		      Max = erlang:max(Val1, Val2),
-		      io:format("Maximum value for ~p is ~p ~n", [Pid_proc, Max])
-		 end,
+		        Max = erlang:max(Val1, Val2),
+		        io:format("Maximum value at ~p is ~p ~n", [Pid_proc, Max]),
+			Pid_proc ! {update, Function, Max}
+		      
+		  end,
 		  
 	calculate()
 end.
 
 start() ->
-PIDS1 = [er_ping1],
-PIDS2 = [er_ping],
-register(er_ping, spawn(ipc, p1, [PIDS1])),
-register(er_ping1, spawn(ipc, p2, [PIDS2])),
-register(er_calculate, spawn(ipc,calculate,[])).
+
+Pidlist = [er_ping1,er_ping3,er_ping2,er_ping4,er_ping5,er_ping6,er_ping7,er_ping8,er_ping9,er_ping10,er_ping11,er_ping12, er_ping13,er_ping14, er_ping15],
+
+Pids1 = [er_ping4,er_ping3,er_ping2,er_ping5,er_ping6,er_ping7,er_ping8,er_ping9,er_ping10,er_ping11,er_ping12, er_ping13,er_ping14, er_ping15],
+Pids2 = [er_ping1,er_ping3,er_ping4,er_ping5,er_ping6,er_ping7,er_ping8,er_ping9,er_ping10,er_ping11,er_ping12, er_ping13,er_ping14, er_ping15],
+Pids3 = [er_ping1,er_ping4,er_ping2,er_ping5,er_ping6,er_ping7,er_ping8,er_ping9,er_ping10,er_ping11,er_ping12, er_ping13,er_ping14, er_ping15],
+Pids4 = [er_ping1,er_ping3,er_ping2,er_ping5,er_ping6,er_ping7,er_ping8,er_ping9,er_ping10,er_ping11,er_ping12, er_ping13,er_ping14, er_ping15],
+Pids5 = [er_ping1,er_ping3,er_ping4,er_ping2,er_ping6,er_ping7,er_ping8,er_ping9,er_ping10,er_ping11,er_ping12, er_ping13,er_ping14, er_ping15],
+Pids6 = [er_ping1,er_ping3,er_ping4,er_ping5,er_ping2,er_ping7,er_ping8,er_ping9,er_ping10,er_ping11,er_ping12, er_ping13,er_ping14, er_ping15],
+Pids7 = [er_ping1,er_ping3,er_ping4,er_ping5,er_ping6,er_ping2,er_ping8,er_ping9,er_ping10,er_ping11,er_ping12, er_ping13,er_ping14, er_ping15],
+Pids8 = [er_ping1,er_ping3,er_ping4,er_ping5,er_ping6,er_ping7,er_ping2,er_ping9,er_ping10,er_ping11,er_ping12, er_ping13,er_ping14, er_ping15],
+Pids9 = [er_ping1,er_ping3,er_ping4,er_ping5,er_ping6,er_ping7,er_ping8,er_ping2,er_ping10,er_ping11,er_ping12, er_ping13,er_ping14, er_ping15],
+Pids10 = [er_ping1,er_ping3,er_ping4,er_ping5,er_ping6,er_ping7,er_ping8,er_ping9,er_ping2,er_ping11,er_ping12, er_ping13,er_ping14, er_ping15],
+Pids11 = [er_ping1,er_ping3,er_ping4,er_ping5,er_ping6,er_ping7,er_ping8,er_ping9,er_ping10,er_ping2,er_ping12, er_ping13,er_ping14, er_ping15],
+Pids12 = [er_ping1,er_ping3,er_ping4,er_ping5,er_ping6,er_ping7,er_ping8,er_ping9,er_ping10,er_ping11,er_ping2, er_ping13,er_ping14, er_ping15],
+Pids13 = [er_ping1,er_ping3,er_ping4,er_ping5,er_ping6,er_ping7,er_ping8,er_ping9,er_ping10,er_ping11,er_ping12, er_ping2,er_ping14, er_ping15],
+Pids14 = [er_ping1,er_ping3,er_ping4,er_ping5,er_ping6,er_ping7,er_ping8,er_ping9,er_ping10,er_ping11,er_ping12, er_ping13,er_ping2, er_ping15],
+Pids15 = [er_ping1,er_ping3,er_ping4,er_ping5,er_ping6,er_ping7,er_ping8,er_ping9,er_ping10,er_ping11,er_ping12, er_ping13,er_ping14, er_ping12],
+
+Val1 = 1.2345,
+Val2 = 2.3456,
+Val3 = 3.3456,
+
+Val4 = 4.3456,
+Val5 = 5.3456,
+Val6 = 6.3456,
+Val7 = 7.3456,
+Val8 = 8.3456,
+Val9 = 9.3456,
+Val10 = 10.3456,
+Val11 = 11.3456,
+Val12 = 12.3456,
+Val13 = 13.3456,
+Val14 = 14.3456,
+Val15 = 15.3456,
+
+register(er_ping1, spawn(ipc,  threadoperation, [[Pids1], Val1])),
+register(er_ping2, spawn(ipc, threadoperation, [[Pids2], Val2])),
+register(er_ping3, spawn(ipc, threadoperation, [[Pids3], Val3])),
+register(er_ping4, spawn(ipc, threadoperation, [[Pids4], Val4])),
+register(er_ping5, spawn(ipc, threadoperation, [[Pids5], Val5])),
+register(er_ping6, spawn(ipc, threadoperation, [[Pids6], Val6])),
+register(er_ping7, spawn(ipc, threadoperation, [[Pids7], Val7])),
+register(er_ping8, spawn(ipc, threadoperation, [[Pids8], Val8])),
+register(er_ping9, spawn(ipc, threadoperation, [[Pids9], Val9])),
+register(er_ping10, spawn(ipc, threadoperation, [[Pids10], Val10])),
+register(er_ping11, spawn(ipc, threadoperation, [[Pids11], Val11])),
+register(er_ping12, spawn(ipc, threadoperation, [[Pids12], Val12])),
+register(er_ping13, spawn(ipc, threadoperation, [[Pids13], Val13])),
+register(er_ping14, spawn(ipc, threadoperation, [[Pids14], Val14])),
+register(er_ping15, spawn(ipc, threadoperation, [[Pids15], Val15])),
+
+register(er_calculate, spawn(ipc, calculate, [])),
+initialise([Pidlist]),
+er_ping1 ! {calculate, min, Val2}.
