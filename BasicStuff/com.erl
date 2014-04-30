@@ -6,7 +6,7 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([ start/0, initProc/2, process/2, segfile/2]).
+-export([ start/0, initProc/2, process/2, segfile/2,threadoperation/2, calculate/0]).
 
 
 
@@ -35,7 +35,7 @@ for(Max, Max, F) ->
 for(I, Max,F) ->
     [F(I)|for(I+1,Max, F)].
 
-segfile(FileName,S) ->
+segfile(FileName,S,Destination) ->
     {ok, Binary} = file:read_file(FileName),
     Lines = string:tokens(erlang:binary_to_list(Binary), "\n"),
     io:format("~p~n",[Lines]),
@@ -45,7 +45,7 @@ segfile(FileName,S) ->
     %%io:format("~p~n",[lists:nth(2,MyLists)]),
     	
       for(1,length(MyLists), fun(Index) ->
-     				    filewrite(string:concat("./seg/F_", integer_to_list(Index)),lists:nth(Index,MyLists)),
+     				    filewrite(string:concat(Destination, integer_to_list(Index)),[Index,lists:nth(Index,MyLists)]),
 	                           io:format("~p has been written to ~p ~n", [FileName,string:concat("./seg/F_", integer_to_list(Index)) ])
 					end
 	).
@@ -72,10 +72,20 @@ process(-1,5) ->
     true;
 
 process(Limit,N) ->
-	       	       
+	       	 
+
+	      put("Next",Limit+1),
+	      put("Pre",Limit-1),
+	      if
+	      Limit == N -> erase("Next") , put("Next",0) ;
+	      Limit == 0 -> erase("Pre"), put("Pre", N);
+	      true -> Q=1
+	      end,     
 	      % io:format("in procc method ~n "),
-	       put("Neighbour",[(Limit+1) rem N ,(Limit-1) rem N]),
-	       put("frag", [random:uniform(20) ,random:uniform(20),Limit]),
+		Next = get("Next"), erase("Next"),
+		Pre = get("Pre") , erase("Pre"),
+	       put("Neighbour",[ Pre ,Next]),
+	       put("frag", [random:uniform(20) ,random:uniform(20)]),
 	       io:format("Neighbour are: ~p  ~n ",[get("Neighbour")]),
 	       io:format("NKeys: ~p  ~n ",[get("frag")]),
 	       Newcount = Limit -1,
@@ -100,6 +110,53 @@ initProc(Limit,N) ->
 
 io:format("Forked ~p ~n",[Processname]).
      
+
+%Author: Anuja
+%Functionality: Min-Max Calculation
+initialise([Pidlist]) ->
+	lists:foreach(fun(Pid) -> Pid ! initialise end, Pidlist).	       		      
+
+threadoperation([Pids], Myvalue) ->
+	receive 
+		initialise ->	
+			%io:format("Initialising ~p ~n",[self()]),
+			put("min",[Myvalue]),
+			put("max",[Myvalue]),
+			threadoperation([Pids], Myvalue);
+		{calculate,Function, Value} ->
+	      		er_calculate ! {self(), Function, Myvalue, Value},
+	      		lists:foreach(fun(Pid) -> Pid ! {calculate,Function,Myvalue} end, Pids),
+	      		threadoperation([Pids],Myvalue);
+		{update, Function, Value} ->
+			% io:format("~p: Got updated value: ~p", [self(),Value]),
+			 erase(Function),
+			 put(Function, Value),
+			 threadoperation([Pids], get(Function))		      	  
+				     					
+	end.
+
+
+calculate() ->
+	  
+receive
+	%start ->
+	  %    io:format("Received start ~n");
+	{Pid_proc, Function,Val1, Val2} ->
+		%io:format(" Received message from ~p. Function is ~p. VLalues are ~p ~p ~n", [Pid_proc, Function, Val1, Val2]),
+		case Function of 
+	  	  min -> 
+		     	 Min = erlang:min(Val1, Val2), 	 
+			 io:format("Minimum value at ~p is ~p ~n", [Pid_proc, Min]),
+			 Pid_proc ! {update, Function, [Min]};
+	   	  max -> 
+		        Max = erlang:max(Val1, Val2),
+		        io:format("Maximum value at ~p is ~p ~n", [Pid_proc, Max]),
+			Pid_proc ! {update, Function, Max}
+		      
+		  end,
+		  
+	calculate()
+end.
      
      
      
