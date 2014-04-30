@@ -6,7 +6,7 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([ start/0, initProc/2, process/2, segfile/2,threadoperation/2, calculate/0]).
+-export([ start/0, initProc/2, process/2, segfile/2]).
 
 
 
@@ -16,11 +16,11 @@
 
 
 start() ->
-segfile("./data.dat",2),
-initProc(5,5),
-     Msg =[1,88,99],
-     whereis('P_5') ! Msg.
-	
+ProcNum =5,
+segfile("./data.dat",3),
+initProc(ProcNum,ProcNum),
+     Msg =[1,88,99].
+     %whereis('P_2') ! Msg.
 
 %%  author: Yin Huang
 %%  Input: 1. filename to be segmented for example: ""./data/data.dat"
@@ -35,18 +35,18 @@ for(Max, Max, F) ->
 for(I, Max,F) ->
     [F(I)|for(I+1,Max, F)].
 
-segfile(FileName,S,Destination) ->
+segfile(FileName,S) ->
     {ok, Binary} = file:read_file(FileName),
     Lines = string:tokens(erlang:binary_to_list(Binary), "\n"),
-    io:format("~p~n",[Lines]),
+    %io:format("~p~n",[Lines]),
     MyLists = [ lists:sublist(Lines, X, S) || X <- lists:seq(1,length(Lines),S) ],
-    io:format("~p~n", [MyLists] ),
+    %io:format("~p~n", [MyLists] ),
     io:format("~p~n", [length(MyLists)]),
     %%io:format("~p~n",[lists:nth(2,MyLists)]),
     	
-      for(1,length(MyLists), fun(Index) ->
-     				    filewrite(string:concat(Destination, integer_to_list(Index)),[Index,lists:nth(Index,MyLists)]),
-	                           io:format("~p has been written to ~p ~n", [FileName,string:concat("./seg/F_", integer_to_list(Index)) ])
+      for(1,length(MyLists), fun(Index) ->	    
+     				    filewrite(string:concat("./seg/F_", integer_to_list(Index)),lists:nth(Index,MyLists))
+	                           %io:format("~p has been written to ~p ~n", [FileName,string:concat("./seg/F_", integer_to_list(Index)) ])
 					end
 	).
 
@@ -72,8 +72,10 @@ process(-1,5) ->
     true;
 
 process(Limit,N) ->
-	       	 
-
+	      FileName =string:concat("./seg/F_",integer_to_list(Limit+1)),
+ 	      %io:format("Reading frag from: ~p  ~n ",[FileName]),
+              {ok, Binary} = file:read_file(FileName),
+	      Lines = string:tokens(erlang:binary_to_list(Binary), "\n"),
 	      put("Next",Limit+1),
 	      put("Pre",Limit-1),
 	      if
@@ -84,18 +86,21 @@ process(Limit,N) ->
 	      % io:format("in procc method ~n "),
 		Next = get("Next"), erase("Next"),
 		Pre = get("Pre") , erase("Pre"),
-	       put("Neighbour",[ Pre ,Next]),
-	       put("frag", [random:uniform(20) ,random:uniform(20)]),
+	       put("Neighbour",[Pre ,Next]),
+		Data =[random:uniform(10) || _ <- lists:seq(1, 10)],
+	       put("frag", Lines),
 	       io:format("Neighbour are: ~p  ~n ",[get("Neighbour")]),
-	       io:format("NKeys: ~p  ~n ",[get("frag")]),
+	       io:format("Keys: ~p  ~n ",[get("frag")]),
 	       Newcount = Limit -1,
+	       %threadoperation(get("frag"),get("Neighbour")),
 	      % io:format(" NewCount: ~p ~n", [Newcount]),
 	       initProc(Newcount,N),
 	 %end. 
 		
-	 receive 
-	Msg ->
+	 receive 	  
+	 Msg ->
 	  io:format("Keys in rec: ~p  ~n ",[get("frag")])
+	  
     end.
 
 
@@ -111,8 +116,7 @@ initProc(Limit,N) ->
 io:format("Forked ~p ~n",[Processname]).
      
 
-%Author: Anuja
-%Functionality: Min-Max Calculation
+
 initialise([Pidlist]) ->
 	lists:foreach(fun(Pid) -> Pid ! initialise end, Pidlist).	       		      
 
