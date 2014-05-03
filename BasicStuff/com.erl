@@ -16,8 +16,8 @@
 
 
 start() ->
-ProcNum =10,
-segfile("./data.dat",ProcNum rem 3 ),
+ProcNum =50,
+segfile("./data.dat",(ProcNum rem 10)+1),
 initProc(ProcNum,ProcNum),
      Msg =[1,88,99].
      %whereis('P_2') ! Msg.
@@ -45,7 +45,7 @@ segfile(FileName,S) ->
     %%io:format("~p~n",[lists:nth(2,MyLists)]),
     	
       for(1,length(MyLists), fun(Index) ->	    
-     				    filewrite(string:concat("./seg/F_", integer_to_list(Index)),lists:nth(Index,MyLists))
+     				    filewrite(string:concat("./seg/F_", integer_to_list(Index-1)),lists:nth(Index,MyLists))
 	                           %io:format("~p has been written to ~p ~n", [FileName,string:concat("./seg/F_", integer_to_list(Index)) ])
 					end
 	).
@@ -72,7 +72,9 @@ process(-1,5) ->
     true;
 
 process(Limit,N) ->
-	      FileName =string:concat("./seg/F_",integer_to_list(((Limit+1) rem N)+1)),
+		FragId = (Limit rem 10)+1,
+	      FileName =string:concat("./seg/F_",integer_to_list(FragId)),
+	       io:format("Frag Id: ~p ~n", [FragId]),
  	      %io:format("Reading frag from: ~p  ~n ",[FileName]),
               {ok, Binary} = file:read_file(FileName),
 	      Lines = string:tokens(erlang:binary_to_list(Binary), "\n|,"),
@@ -86,9 +88,10 @@ process(Limit,N) ->
 	      % io:format("in procc method ~n "),
 		Next = get("Next"), erase("Next"),
 		Pre = get("Pre") , erase("Pre"),
-	       put("Neighbour",[Pre ,Next]),
+	       put("Neighbour",[Pre , Next]),
 		Data =[random:uniform(10) || _ <- lists:seq(1, 10)],
 	       put("frag", Lines),
+	       put("FragId",(Limit+1) rem N),
 	       io:format("Neighbour are: ~p  ~n ",[get("Neighbour")]),
 	       io:format("Keys: ~p  ~n ",[get("frag")]),
 	       Newcount = Limit -1,
@@ -100,7 +103,6 @@ process(Limit,N) ->
 	 receive 	  
 	 Msg ->
 	  io:format("Keys in rec: ~p  ~n ",[get("frag")])
-	  
     end.
 
 
