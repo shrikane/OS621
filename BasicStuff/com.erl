@@ -16,8 +16,8 @@
 
 
 start() ->
-ProcNum =5,
-segfile("./data.dat",3),
+ProcNum =10,
+segfile("./data.dat",ProcNum rem 3 ),
 initProc(ProcNum,ProcNum),
      Msg =[1,88,99].
      %whereis('P_2') ! Msg.
@@ -72,10 +72,10 @@ process(-1,5) ->
     true;
 
 process(Limit,N) ->
-	      FileName =string:concat("./seg/F_",integer_to_list(Limit+1)),
+	      FileName =string:concat("./seg/F_",integer_to_list(((Limit+1) rem N)+1)),
  	      %io:format("Reading frag from: ~p  ~n ",[FileName]),
               {ok, Binary} = file:read_file(FileName),
-	      Lines = string:tokens(erlang:binary_to_list(Binary), "\n"),
+	      Lines = string:tokens(erlang:binary_to_list(Binary), "\n|,"),
 	      put("Next",Limit+1),
 	      put("Pre",Limit-1),
 	      if
