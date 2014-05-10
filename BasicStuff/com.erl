@@ -75,7 +75,7 @@ writeline(Device, Line, _) -> io:fwrite(Device, "~s\n", [Line]).
 %%  Input: 1. Process ID number
 %%         2. Number of process to be spawn
 
-
+%creates neighbour's list for ring toplology 
 getRoutingTable(Max,N) ->
 		erase("Next"),
 		erase("Pre"),
@@ -97,12 +97,13 @@ listAppneder(N,Route) ->
 Route1 = lists:append(Route, [N]),
 listAppneder(N-1,Route1).
 
+%creates neighbour's list for mesh toplology 
 getRoutingTableMesh(Max,N) ->
 X = listAppneder(Max,[]),
 X1 = lists:delete(N, X),
 io:format("Route: ~w ~n", [X1]).
 
-
+% get fragment as per id
 getFrag(FragId) ->
  FileName =string:concat("./seg/F_",integer_to_list(FragId)),
 	       io:format("Frag Id: ~p ~n", [FragId]),
@@ -113,10 +114,13 @@ getFrag(FragId) ->
 		Lines = lists:map(fun(X) -> {Int, _} = string:to_float(X), Int end, Lines1).
 
 
-
+%exit condition for proc
 process(-1,N,Topology) ->
     true;
 
+
+% Topology = whcih topology we need to use
+% Limit process number at start it is equal to max number of process
 process(Limit,N,Topology) ->
 	       FragId = (Limit rem 10)+1,
 	       Lines = getFrag(FragId),
@@ -147,6 +151,7 @@ initProc(-1,N) ->
 %io:format("NP_id: ~p  ~n ",[]),
 true;
 
+% function to grgister process
 initProc(Limit,N) ->  
     % io:format("Limit is ~p ~n ", [Limit]),
      Processname = list_to_atom(string:concat( "P_" ,integer_to_list(Limit))),
@@ -155,7 +160,7 @@ initProc(Limit,N) ->
 io:format("Forked ~p ~n",[Processname]).
      
 
-
+%Anuja's code starts here.
 initialise(Pidlist, Function) ->
 	lists:foreach(fun(Pid) -> Pid ! {initialise, Function} end, Pidlist).	       		      
 
