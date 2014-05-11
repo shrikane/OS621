@@ -1,0 +1,38 @@
+CMSC 621 Erlang Project Report
+Authors: Yin Huang, Anuja Kench, Shrinivas Kane, Abhishek Sethi
+Date: May-10-2014
+
+Section 1 Basic Design
+Initialize() function sets up the network topology and corresponding process numbers, and gossip iterations. 
+To find min or max value, send a message {min/max}
+
+Section 2 Gossip implementation 
+Every node maintains a neighbor list as its neighbor nodes. Whenever a node receives a request message, it will randomly pick up a node in the neighbor
+list, and forward the request. We set up a threshold parameter named Itr to determine the number of iterations. So the gossip for each node will be
+executing Itr times. We will report our convergance ratio in our result section with regard to the size of the network, topology of the network, and 
+the size of the file, number of segmentation of the file etc. 
+
+Section 3 Min max implementation
+
+Section 4 Write and read segmentation implementation
+
+We have wrappted both the read and write operation in a single process called SeqUpdate(). The reason to put these two operations in the same process
+is to aovid the problems incurred by multiple accesses to the same file. SeqUpdate() will only execute either write or read to the segmentation.
+Whenever a process receives a wirte or read message, the porcess will check its own data directory to see if it contains the target segmentation.
+For write operation, if the process contains the segmentaion, it will continue and update the segmentation, else it will ignore the request.
+For read operation, if the process contains the segmentation, it will reply the values of the segmentation to the request node, otherwise it will
+ignore the request. We have two operation modes: a. Synchrnonised b. Asynchronised. In Synchronised case, the request node will wait for all replies 
+for target nodes util it stops gossipping. In Asynchornised case, the request node will not wait for any replies but rather work on ther things. 
+The synchronised case gives better consistency while the asyncrhonised has better performance. The former is way more complicated than ther latter.
+In our implementation, we take the asynchornised mode where the write request is sent out and gossip a fixed number of iterations while the read 
+request is only waiting for the first reply from any matching node that has the segmentation.
+
+Section 5 Results
+
+Section 6 Analysis and discussion
+Problem 1 Consistency
+Solution: a. 
+Section 7 Conclusion
+
+Section 8 Future work
+
