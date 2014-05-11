@@ -191,7 +191,7 @@ threadoperation(Pids, Mydata,SegId) ->
 			case Function of 
 				min ->
 					Min = minimum(Mydata),
-					put("Function", Min);
+					put("Function", Min),
 					io:format("Local min is ~p ~n", [Min]);
 				%	io:format("Local value of ~p is ~p ~n", [Function, get("function")])
 				max ->
