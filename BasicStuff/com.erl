@@ -130,6 +130,10 @@ startprocessing(Pids, Function);
 initProc(Limit,N,Topology,Function,Frag) ->  
     
      Processname = list_to_atom(string:concat( "P_" ,integer_to_list(Limit))),
+     NumNode = length(nodes()),
+	 NodeList = nodes(),
+	 	io:format("Number of Nodes connected to me ~p ~n ", [NumNode]),
+	 	io:format(" Nodes connected to me ~p ~n ", [NodeList]),
        FragId = (Limit rem Frag) +1,
        
 	      Lines = getFrag(FragId),
@@ -138,9 +142,15 @@ initProc(Limit,N,Topology,Function,Frag) ->
 	      Topology == 1  -> Route = getRoutingTable(N,Limit) ;
 	      true -> Route = getRoutingTableMesh(N,Limit)
 	      end,
-	   %io:format("Adding route is ~p ~n ", [Route]),   
-     register(Processname ,spawn_link(com , threadoperation , [Route,Lines,FragId])),
-     Processname ! { initialise, Function},
+	   %io:format("Adding route is ~p ~n ", [Route]), 
+	   
+	   
+	   if
+	     NumNode == 0  -> global:register_name(Processname ,spawn_link(node(),com , threadoperation , [Route,Lines,FragId]));
+	     true ->  global:register_name(Processname ,spawn_link( lists:nth( Limit rem NumNode , NodeList),com , threadoperation , [Route,Lines,FragId]))
+     end,
+     %register(Processname ,spawn_link(com , threadoperation , [Route,Lines,FragId])),
+    global:send( Processname , { initialise, Function}),
      initProc(Limit-1,N,Topology,Function,Frag).
 
 %io:format("Forked ~p ~n",[Processname]).
@@ -152,7 +162,7 @@ initialise(Pidlist, Function) ->
 
 startprocessing(Pidlist, Function) ->
 	lists:foreach(fun(Pid) ->
-		timer:send_after(500, Pid, {timer, Function}) end, Pidlist).
+		global:send( Pid, {timer, Function}) end, Pidlist).
 	%lists:foreach(fun(Pid) -> Pid ! {timer, Function} end, Pidlist).	       		      
 	
 
@@ -232,12 +242,15 @@ threadoperation(Pids, Mydata,SegId) ->
 			case Function of
 			  min ->
 				Min = get("Function"),
-				Pid ! {self(), request, Function, Min};
+				%io:format("Sending msg to :~p ",[Pid]),
+				global:send(Pid,{self(), request, Function, Min});
+				%Pid ! {self(), request, Function, Min};
 			  max ->
 				Max = get("Function"),
-				Pid ! {self(), request, Function, Max};
+				global:send(Pid,{self(), request, Function, Max});
+				%Pid ! {self(), request, Function, Max};
 			  average ->
-	      			Pid ! {self(),request, Function, get("localsum"), get("localsize")}
+	      		global:send (Pid , {self(),request, Function, get("localsum"), get("localsize")})
 			  end,
 					
 			threadoperation(Pids, Mydata,SegId);
@@ -294,9 +307,9 @@ threadoperation(Pids, Mydata,SegId) ->
 			put("localsize", SizeValue),
 			threadoperation(Pids, Mydata,SegId);
 		{timer, Function} ->
-			io:format("~p Started processing....",[self()]),
+			%io:format("~p Started processing....",[self()]),
 			self() ! {calculate, Function},
-			timer:send_after(100,self(), {timer, Function}),
+			timer:send_after(500,self(), {timer, Function}),
 			threadoperation(Pids, Mydata,SegId)
 				
 			 
