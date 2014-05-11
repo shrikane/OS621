@@ -6,7 +6,7 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([ start/5, initProc/4,  segfile/2,  listAppneder/2, threadoperation/3, calculate/0]).
+-export([ start/5, initProc/5,  segfile/2,  listAppneder/2, threadoperation/3, calculate/0]).
 
 
 
@@ -22,7 +22,10 @@
 start(ProcNum,Topology,Itr,FilePath,Function) ->
 register(er_calculate, spawn(com, calculate, [])),
 segfile(FilePath,10),
-initProc(ProcNum,ProcNum,Topology,Function),
+{ok, Filenames} = file:list_dir("./seg/"),
+Frags = length(Filenames) -1 ,
+io:format("~p~n",[Frags]),
+initProc(ProcNum,ProcNum,Topology,Function,Frags),
      Msg =[1,88,99].
      %whereis('P_2') ! Msg.
 
@@ -118,19 +121,19 @@ getFrag(FragId) ->
 
 
 
-initProc(-1,N,Topology,Function) -> 
+initProc(-1,N,Topology,Function,Frag) -> 
 %io:format("NP_id: ~p  ~n ",[]),
 Pids =listAppneder(N,[]),
-
 startprocessing(Pids, Function);
 
 
-initProc(Limit,N,Topology,Function) ->  
+initProc(Limit,N,Topology,Function,Frag) ->  
     
      Processname = list_to_atom(string:concat( "P_" ,integer_to_list(Limit))),
-       FragId = (Limit rem 8)+1,
-       io:format("Frag Id ~p ~n ", [FragId]),
+       FragId = (Limit rem Frag) +1,
+       
 	      Lines = getFrag(FragId),
+	      %io:format("Data ~p ~n ", [Lines]),
 	      if
 	      Topology == 1  -> Route = getRoutingTable(N,Limit) ;
 	      true -> Route = getRoutingTableMesh(N,Limit)
@@ -138,7 +141,7 @@ initProc(Limit,N,Topology,Function) ->
 	   %io:format("Adding route is ~p ~n ", [Route]),   
      register(Processname ,spawn_link(com , threadoperation , [Route,Lines,FragId])),
      Processname ! { initialise, Function},
-     initProc(Limit-1,N,Topology,Function).
+     initProc(Limit-1,N,Topology,Function,Frag).
 
 %io:format("Forked ~p ~n",[Processname]).
      
@@ -158,6 +161,8 @@ sum(List) ->
    sum(List, 0).
 
 sum([Head|Tail], Result) -> 
+   io:format("Head: ~p ~n ", [Head]),
+   io:format("Result: ~p ~n ", [Result]),	
    sum(Tail, Head + Result); 
 
 sum([], Result) ->
@@ -185,6 +190,7 @@ maximum2([_|Tail], Max) -> maximum2(Tail, Max).
 
 %Main Function for threads
 threadoperation(Pids, Mydata,SegId) ->
+	
 	receive 
 		{initialise, Function} ->	
 			%io:format("Initialising ~p ~n",[self()]),
@@ -200,6 +206,7 @@ threadoperation(Pids, Mydata,SegId) ->
 					%io:format("Local max is ~p ~n", [Max]);
 					%io:format("Local value of ~p is ~p ~n", [Function, get("function")]);
 				average ->
+				   io:format("Local Data is ~p ~n", [Mydata]),
 					Sum = sum(Mydata),
 					Size = len(Mydata), 
 					put("localsum",Sum),
@@ -331,3 +338,4 @@ receive
     
     
     
+
