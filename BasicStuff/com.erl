@@ -21,7 +21,7 @@
 % Function min,max,avg ,update , read 
 start(ProcNum,Topology,Itr,FilePath,Function) ->
 register(er_calculate, spawn(com, calculate, [])),
-segfile(FilePath,10),
+segfile(FilePath,ProcNum div random:uniform(ProcNum)),
 {ok, Filenames} = file:list_dir("./seg/"),
 Frags = length(Filenames) -1 ,
 io:format("~p~n",[Frags]),
