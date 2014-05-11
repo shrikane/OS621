@@ -6,7 +6,7 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([ start/0, initProc/2, process/3, segfile/2]).
+-export([ start/5, initProc/4,  segfile/2,  listAppneder/2, threadoperation/3, calculate/0]).
 
 
 
@@ -14,11 +14,15 @@
 %% Internal functions
 %% ====================================================================
 
-
-start() ->
-ProcNum =50,
-segfile("./data.dat",ProcNum div 2),
-initProc(ProcNum,ProcNum),
+% Number of Process , Topology Type
+% Topology =1 is Ring
+% Topology =0 is Mesh	
+% FilePath input data file
+% Function min,max,avg ,update , read 
+start(ProcNum,Topology,Itr,FilePath,Function) ->
+register(er_calculate, spawn(com, calculate, [])),
+segfile(FilePath,ProcNum div 2),
+initProc(ProcNum,ProcNum,Topology,Function),
      Msg =[1,88,99].
      %whereis('P_2') ! Msg.
 
@@ -38,10 +42,10 @@ for(I, Max,F) ->
 segfile(FileName,N) ->
     {ok, Binary} = file:read_file(FileName),
     Lines = string:tokens(erlang:binary_to_list(Binary), "\n"),
-    io:format("~p~n",[Lines]),
+    %io:format("~p~n",[Lines]),
     MyLists = [ lists:sublist(Lines, X, (length(Lines) div (N))) || X <- lists:seq(1,length(Lines),(length(Lines) div (N))) ],
-    io:format("~p~n", [MyLists] ),
-    io:format("~p~n", [length(MyLists)]),
+    %io:format("~p~n", [MyLists] ),
+    %io:format("~p~n", [length(MyLists)]),
     %io:format("~p~n",[lists:nth(2,MyLists)]),
      for(1,length(MyLists), fun(Index) ->
 				    filewrite(string:concat("./seg/F_", integer_to_list(Index)),lists:nth(Index,MyLists)),
@@ -75,35 +79,34 @@ writeline(Device, Line, _) -> io:fwrite(Device, "~s\n", [Line]).
 %%  Input: 1. Process ID number
 %%         2. Number of process to be spawn
 
-%creates neighbour's list for ring toplology 
+
 getRoutingTable(Max,N) ->
 		erase("Next"),
 		erase("Pre"),
-   	   io:format("Next: ~p ~n", [N+1]),
- 	    io:format("Pre: ~p ~n", [N-1]),
-	     put("Next",N+1),
-	     put("Pre",N-1),
+   	   %io:format("Next: ~p ~n", [list_to_atom(string:concat( "P_" ,integer_to_list(N+1)))]),
+ 	   %io:format("Pre: ~p ~n", [list_to_atom(string:concat( "P_" ,integer_to_list(N-1)))]),
+	     put("Next",list_to_atom(string:concat( "P_" ,integer_to_list(N+1)))),
+	     put("Pre",list_to_atom(string:concat( "P_" ,integer_to_list(N-1)))),
 	      if
-	      Max == N -> erase("Next") , put("Next",0) ;
-	      N == 0 -> erase("Pre"), put("Pre", N);
+	      Max == N -> erase("Next") , put("Next",list_to_atom(string:concat( "P_" ,integer_to_list(0)))) ;
+	      N == 0 -> erase("Pre"), put("Pre", list_to_atom(string:concat( "P_" ,integer_to_list(N))));
 	      true -> Q=1
 	      end,     
 	 Route = [get("Pre"),get("Next")].
 
 listAppneder(0,Route) ->
-lists:append(Route, [0]);
+lists:append(Route, [list_to_atom(string:concat( "P_" ,integer_to_list(0)))]);
 
 listAppneder(N,Route) ->
-Route1 = lists:append(Route, [N]),
+Route1 = lists:append(Route, [list_to_atom(string:concat( "P_" ,integer_to_list(N)))]),
 listAppneder(N-1,Route1).
 
-%creates neighbour's list for mesh toplology 
 getRoutingTableMesh(Max,N) ->
 X = listAppneder(Max,[]),
-X1 = lists:delete(N, X),
-io:format("Route: ~w ~n", [X1]).
+X1 = lists:delete(list_to_atom(string:concat( "P_" ,integer_to_list(N))), X).
+%io:format("Route: ~w ~n", [X1]).
 
-% get fragment as per id
+
 getFrag(FragId) ->
  FileName =string:concat("./seg/F_",integer_to_list(FragId)),
 	       io:format("Frag Id: ~p ~n", [FragId]),
@@ -114,59 +117,39 @@ getFrag(FragId) ->
 		Lines = lists:map(fun(X) -> {Int, _} = string:to_float(X), Int end, Lines1).
 
 
-%exit condition for proc
-process(-1,N,Topology) ->
-    true;
+
+initProc(-1,N,Topology,Function) -> 
+%io:format("NP_id: ~p  ~n ",[]),
+Pids =listAppneder(N,[]),
+
+startprocessing(Pids, Function);
 
 
-% Topology = whcih topology we need to use
-% Limit process number at start it is equal to max number of process
-process(Limit,N,Topology) ->
-	       FragId = (Limit rem 10)+1,
-	       Lines = getFrag(FragId),
+initProc(Limit,N,Topology,Function) ->  
+    
+     Processname = list_to_atom(string:concat( "P_" ,integer_to_list(Limit))),
+       FragId = Limit rem (N div 2),
+       io:format("Frag Id ~p ~n ", [FragId]),
+	      Lines = getFrag(FragId),
 	      if
-	      Topology ==1 -> Route = getRoutingTable(N,Limit) ;
+	      Topology == 1  -> Route = getRoutingTable(N,Limit) ;
 	      true -> Route = getRoutingTableMesh(N,Limit)
 	      end,
-	       
-	       put("Neighbour",Route),
-	       Data =[random:uniform(10) || _ <- lists:seq(1, 10)],
-	       put("frag", Lines),
-	       put("FragId",(Limit+1) rem N),
-	       io:format("Neighbour are: ~w  ~n ",[get("Neighbour")]),
-	       io:format("Keys: ~p  ~n ",[get("frag")]),
-	       Newcount = Limit -1,
-	       %threadoperation(get("frag"),get("Neighbour")),
-	      % io:format(" NewCount: ~p ~n", [Newcount]),
-	       initProc(Newcount,N),
-	 %end. 
-		
-	 receive 	  
-	 Msg ->
-	  io:format("Keys in rec: ~p  ~n ",[get("frag")])
-    end.
+	   %io:format("Adding route is ~p ~n ", [Route]),   
+     register(Processname ,spawn_link(com , threadoperation , [Route,Lines,FragId])),
+     Processname ! { initialise, Function},
+     initProc(Limit-1,N,Topology,Function).
 
-
-initProc(-1,N) -> 
-%io:format("NP_id: ~p  ~n ",[]),
-true;
-
-% function to grgister process
-initProc(Limit,N) ->  
-    % io:format("Limit is ~p ~n ", [Limit]),
-     Processname = list_to_atom(string:concat( "P_" ,integer_to_list(Limit))),
-     register(Processname ,spawn_link(com , process , [Limit,N,0])),
-
-io:format("Forked ~p ~n",[Processname]).
+%io:format("Forked ~p ~n",[Processname]).
      
 
-%Anuja's code starts here.
+
 initialise(Pidlist, Function) ->
 	lists:foreach(fun(Pid) -> Pid ! {initialise, Function} end, Pidlist).	       		      
 
 startprocessing(Pidlist, Function) ->
 	lists:foreach(fun(Pid) ->
-		timer:send_after(50000, Pid, {timer, Function}) end, Pidlist).
+		timer:send_after(500, Pid, {timer, Function}) end, Pidlist).
 	%lists:foreach(fun(Pid) -> Pid ! {timer, Function} end, Pidlist).	       		      
 	
 
@@ -201,20 +184,20 @@ maximum2([_|Tail], Max) -> maximum2(Tail, Max).
 
 
 %Main Function for threads
-threadoperation(Pids, Mydata) ->
+threadoperation(Pids, Mydata,SegId) ->
 	receive 
 		{initialise, Function} ->	
 			%io:format("Initialising ~p ~n",[self()]),
 			case Function of 
 				min ->
 					Min = minimum(Mydata),
-					put("Function", Min),
+					put("Function", Min);
 					io:format("Local min is ~p ~n", [Min]);
-				%	io:format("Local value of ~p is ~p ~n", [Function, get("function")]);
+				%	io:format("Local value of ~p is ~p ~n", [Function, get("function")])
 				max ->
 					Max = maximum(Mydata),
-					put("Function", Max),
-					io:format("Local max is ~p ~n", [Max]);
+					put("Function", Max);
+					%io:format("Local max is ~p ~n", [Max]);
 					%io:format("Local value of ~p is ~p ~n", [Function, get("function")]);
 				average ->
 					Sum = sum(Mydata),
@@ -223,78 +206,86 @@ threadoperation(Pids, Mydata) ->
 					put("localsize", Size)
 			end,
 			
-			put("numNodes", len(Pids)),
-			io:format("Number of nodes ~p ~n", [len(Pids)]),
-			threadoperation(Pids, Mydata);
+			put("numNodes", length(Pids)),
+			%io:format("Number of nodes ~p ~n", [len(Pids)]),
+			threadoperation(Pids, Mydata,SegId);
 		
 		{calculate,Function} ->
-	     		io:format("Received message to calculate ~p ~n ", [Function]),
+	     		%io:format("Received message to calculate ~p ~n ", [Function]),
 			random:seed(now()),
 			Random = random:uniform(get("numNodes")),
-			io:format("Random:~p ",[Random]),
+			%io:format("Random:~p ",[Random]),
 			Pid = lists:nth(random:uniform(get("numNodes")), Pids), % Select a random node to exchange value
-			io:format("Sending information to ~p ~n", [Pid]),
+			%io:format("Sending information to ~p ~n", [Pid]),
 			case Function of
 			  min ->
-				Min = get(Function),
+				Min = get("Function"),
 				Pid ! {self(), request, Function, Min};
 			  max ->
-				Max = get(Function),
+				Max = get("Function"),
 				Pid ! {self(), request, Function, Max};
 			  average ->
 	      			Pid ! {self(),request, Function, get("localsum"), get("localsize")}
 			  end,
 					
-			threadoperation(Pids, Mydata);
+			threadoperation(Pids, Mydata,SegId);
 
 
 		{Pid, request, Function, Sum, Size} ->
-			io:format("~p Got a request from ~p to calculate ~p. Received sum is ~p. Received size is ~p ~n", [self(),Pid, Function, Sum, Size]),
+			%io:format("~p Got a request from ~p to calculate ~p. Received sum is ~p. Received size is ~p ~n", [self(),Pid, Function, Sum, Size]),
 	      		Pid ! {self(),reply, Function, get("localsum"), get("localsize")},% send a reply message with local values	
 			er_calculate ! {self(), Function, get("localsum"), Sum, get("localsize"), Size},
-			threadoperation(Pids, Mydata);	
+			threadoperation(Pids, Mydata,SegId);	
 	      	  
 		{Pid, request, Function, Value} ->
 			%io:format("~p Received a reply from ~p with its local values: ~p ~p  ~n", [self(), Pid, Sum, Size]),
 			case Function of
 				min ->
-					er_calculate ! {self(), Function, get(Function), Value},
-					Pid ! {self(), reply, Function, get(Function)};
+				%io:format("Value is : ~p  ~n", [Value]),
+				%io:format("Self value : ~p  ~n", [get("Function")]) ,
+				%io:format("er_calc ~p  ~n", [whereis(er_calculate)]),
+				
+					whereis(er_calculate) ! {self(), Function, get("Function"), Value},
+					Pid ! {self(), reply, Function, get("Function")};
 				max ->
-					er_calculate ! {self(), Function, get(Function), Value},
-					Pid ! {self(), reply, Function, get(Function)}
+					er_calculate ! {self(), Function, get("Function"), Value},
+					Pid ! {self(), reply, Function, get("Function")}
 			end,
 			%io:format("~p: New local sum  is ~p. New local Size is ~p ~n ", [ self(), get("localsum"), get("localsize")]), 
-			threadoperation(Pids, Mydata);
+			threadoperation(Pids, Mydata,SegId);
 
 		{Pid, reply, Function, Sum, Size} ->
-			io:format("~p Received a reply from ~p with its local values: ~p ~p  ~n", [self(), Pid, Sum, Size]),
+			%io:format("~p Received a reply from ~p with its local values: ~p ~p  ~n", [self(), Pid, Sum, Size]),
 			er_calculate ! {self(), Function, get("localsum"), Sum, get("localsize"),Size},
-			io:format("~p: New local sum  is ~p. New local Size is ~p ~n ", [ self(), get("localsum"), get("localsize")]), 
-			threadoperation(Pids, Mydata);
+			%io:format("~p: New local sum  is ~p. New local Size is ~p ~n ", [ self(), get("localsum"), get("localsize")]), 
+			threadoperation(Pids, Mydata,SegId);
 		{Pid, reply, Function, Value} ->
 			case Function of
 				min ->
-					er_calculate ! {self(), Function, get(Function), Value};
+				%io:format("In reply ,Value is : ~p  ~n", [Value]),
+				%io:format("In reply :Self value : ~p  ~n", [get("Function")]) ,
+				%io:format("er_calculate : ~p  ~n", [whereis(er_calculate)]) ,
+				
+					whereis(er_calculate) ! {self(), Function, get("Function"), Value};
 				max ->
-					er_calculate ! {self(), Function, get(Function), Value}
+					er_calculate ! {self(), Function, get("Function"), Value}
 			end,	
-					threadoperation(Pids, Mydata);
+					threadoperation(Pids, Mydata,SegId);
 		{update, Function, Value} ->
-			erase(Function),
-			put(Function, Value),
-			threadoperation(Pids, Mydata);
+			erase("Function"),
+			put("Function", Value),
+			threadoperation(Pids, Mydata,SegId);
 		{update, Function, localsum, SumValue, localsize, SizeValue} ->
 			erase("localsum"),
 			put("localsum", SumValue),
 			erase("localsize"),
 			put("localsize", SizeValue),
-			threadoperation(Pids, Mydata);
+			threadoperation(Pids, Mydata,SegId);
 		{timer, Function} ->
 			io:format("~p Started processing....",[self()]),
 			self() ! {calculate, Function},
 			timer:send_after(100,self(), {timer, Function}),
-			threadoperation(Pids, Mydata)
+			threadoperation(Pids, Mydata,SegId)
 				
 			 
 				     					
@@ -302,7 +293,7 @@ threadoperation(Pids, Mydata) ->
 
 
 calculate() ->
-	  
+	  	io:format("Received start ~n"),
 receive
 	%start ->
 	  %    io:format("Received start ~n");
@@ -312,22 +303,26 @@ receive
 	  	  min -> 
 		     	 Min = erlang:min(Value1, Value2), 	 
 			 io:format("Minimum value at ~p is ~p ~n", [Pid_proc, Min]),
-			 Pid_proc ! {update, Function, Min};
+			 Pid_proc ! {update, Function, Min},
+			 calculate();
 	   	  max -> 
 		        Max = erlang:max(Value1, Value2),
 		        io:format("Maximum value at ~p is ~p ~n", [Pid_proc, Max]),
-			Pid_proc ! {update, Function, Max}
+			Pid_proc ! {update, Function, Max},
+			calculate()
 		  end;
 	{Pid_proc, Function, Sum1, Sum2, Size1, Size2} ->
 		case Function of 
 		 average ->
 			Sum = Sum1 + Sum2,
 			Size = Size1 + Size2,
-			Pid_proc ! {update,Function, localsum, Sum, localsize, Size}
+			Pid_proc ! {update,Function, localsum, Sum, localsize, Size},
+			calculate()
 		end,	
 		  
 	calculate()
-end.
+	end.
+
 
 
      
