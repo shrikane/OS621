@@ -21,7 +21,7 @@
 % Function min,max,avg ,update , read 
 start(ProcNum,Topology,Itr,FilePath,Function) ->
 register(er_calculate, spawn(com, calculate, [])),
-segfile(FilePath,ProcNum div 2),
+segfile(FilePath,10),
 initProc(ProcNum,ProcNum,Topology,Function),
      Msg =[1,88,99].
      %whereis('P_2') ! Msg.
@@ -128,7 +128,7 @@ startprocessing(Pids, Function);
 initProc(Limit,N,Topology,Function) ->  
     
      Processname = list_to_atom(string:concat( "P_" ,integer_to_list(Limit))),
-       FragId = Limit rem (N div 2),
+       FragId = (Limit rem 8)+1,
        io:format("Frag Id ~p ~n ", [FragId]),
 	      Lines = getFrag(FragId),
 	      if
