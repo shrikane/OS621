@@ -191,6 +191,11 @@ maximum2([_|Tail], Max) -> maximum2(Tail, Max).
 %Main Function for threads
 threadoperation(Pids, Mydata,SegId) ->
 	
+	put("Pid",Pids),
+	put("Data",Mydata),
+	put("segId",segId),
+	
+	
 	receive 
 		{initialise, Function} ->	
 			%io:format("Initialising ~p ~n",[self()]),
