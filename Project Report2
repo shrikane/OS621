@@ -1,0 +1,47 @@
+CMSC 621 Erlang Project Report
+Authors: Yin Huang, Anuja Kench, Shrinivas Kane, Abhishek Sethi
+Date: May-10-2014
+
+Section I Introduction 
+Our implementation of Gossip-based aggregation and data update and retrieval in Erlang aims at performing the following four computational tasks as required in the project description. 
+A single large file F with floating-point numbers have been split into M fragments F_1, F_2, …, F_M which have been placed at various nodes of the system. Each fragment is placed at one or more nodes. 
+1.	Compute the minimum (min) and maximum (max) value in F and store them at node 1. 
+2.	Compute the average (avg) of the values in F and store it at all the nodes.
+3.	Update the contents of fragment i at each node that may have a copy of it. 
+4.	Retrieve the contents of fragment I from any node that may have an up-to-date copy of it. 
+Two types of network were simulated between two virtual machines hosted on two different laptops:
+a.	Ring network
+b.	Meshed network
+In our implementation, we define a node as an Erlang process with process name P_# and each node stores its fragments F_#.  Every node maintains a neighbor node list. This list differs as in these two types of networks. However the gossip mechanism are the same. A computational task request is initialized at node 1, and node 1 will start spreading out the request to its neighbors. Whenever a neighbor node receives a request, this node will first exchange information with the requesting node, and then spread the request to its neighbors.  In such a way this request will eventually reach out to the whole network. In order to pick a neighbor, we use a random number generator to pick a node from the neighbor list. Meanwhile, the user can specify the number of iterations for every node to send out the gossip.
+Assumptions we have made:
+1.	The network is static, which means we don't deal with the node failure, node participation or node departure. We assume every node is alive and stable.  
+2.	The network is reliable and there is no message loss. 
+3.	
+The report is organized in the following sections: Section II explains the gossip algorithm, Section III focuses on the min, max, avg, read and write operation. Section IV demonstrates the research results. Section V is the analysis and discussion, followed by conclusion and future work in Section VI and Section VII.  
+
+Section II Gossip algorithm  
+In large distributed, heterogeneous networks, applications are asking for a set of functions that provide components of a distributed system access to global information such as network size, average load etc. Gossip-based aggregation protocol works in a fully decentralized manner where all nodes exchange the local information with its neighbors and thus infer the global information. There are two types of protocols, reactive and proactive protocols. We focus on the proactive protocol which pushes the query from any issuer to all nodes in the system.   
+We use asynchronous push-pull gossip protocol in our implementation. The task of a proactive protocol is to continuously provide all nodes with an up-to-date information held by current set of nodes. Two services are provided in each node, one is to receive request, the other go update information and send out the new information. 
+Every node maintains a neighbor list as its neighbor nodes. Whenever a node receives a request message, it will randomly pick up a node in the neighbor list, and forward the request. We set up a threshold parameter named Itr to determine the number of iterations. So the gossip for each node will be executing Itr times. We will report our convergence ratio in our result section with regard to the size of the network, topology of the network, and the size of the file, number of segmentation of the file etc. 
+
+Section III 
+A.	Min max avg implementation
+
+B.	 Write and read segmentation implementation
+We have wrapped both the read and write operation in a single process called Update(). The reason to put these two operations in the same process is to avoid the problems incurred by multiple accesses to the same file. Update() will only execute either write or read to the segmentation. Since Erlang has the FIFO mailbox, we simply utilize this mailbox as a job request queue. 
+Whenever a process receives a write or read message, the process will check its own data directory to see if it contains the target segmentation. For write operation, if the process contains the segmentation, it will continue and update the segmentation, else it will pick a random neighbor and forward the request. For read operation, if the process contains the segmentation, it will reply the values of the segmentation to the request node, otherwise it will forward the request to its neighbor. We have two operation modes: a. synchronized b. non-synchronized. In Synchronized case, the request node will wait for all replies for target nodes until it stops gossiping. In non-synchronized case, the request node will not wait for any replies but rather work on other things. The synchronized case gives better consistency while the non-synchronized has better performance (time response). The former is more complicated than the latter.
+In our implementation, we take the non-synchronized mode where the write request is sent out and gossip a fixed number of iterations while the read request is only waiting for the first reply from any matching node that has the segmentation.
+The advantage of such design is that we can guarantee that no race condition for the file will occur, hence a higher accuracy. The disadvantage is the response latency because every time only one node is allowed to do operation on the fragmentation. 
+Another problem with this design is that we are not able to guarantee that a read request will always get the latest version, current implementation only accepts the first response without checking the replies from other nodes. Solution to this problem comes in the following directions. First, we could maintain a list of replicas for each fragmentation, when update the fragmentation, we send out three update requests to these nodes and wait for acknowledgement. We call this schema write-to-all and read-once. The problem with this solution is the high latency for the update operation. Also we need global information about the nodes that hold the replicas. Second, we could use a vector to record the number of updates for each fragmentation, and read the reply with the highest number.  
+Section IV Results 
+
+Section V Analysis and discussion
+Problem 1 Consistency
+Solution: a. 
+Section VI Conclusion
+In this project, we have successfully implemented Gossip-based aggregation and data update and retrieval for a large distributed system using Erlang. The three computational tasks have been demonstrated in terms of efficiency, effectiveness and accuracy. We have compared the convergence performance of gossip in different types of networks, say ring and mesh, and different sizes of networks. 
+
+Section VII Future work
+1.	Use quorum approach to deal with the mutual exclusion problem caused by multiple access to the same fragmentations. 
+2.	
+3.	
