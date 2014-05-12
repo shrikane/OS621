@@ -42,7 +42,9 @@ threadoperation(Pids, Mydata,SegId, Processname,Itr) ->
 	
 	put("Pid",Pids),
 	put("Data",Mydata),
-	put("segId",segId),
+	put("segId",SegId),
+	put("Iteration",Itr),
+	
 		
 		receive 
 		{initialise, Function} ->	
@@ -62,7 +64,11 @@ threadoperation(Pids, Mydata,SegId, Processname,Itr) ->
 					Sum = sum(Mydata),
 					Size = len(Mydata), 
 					put("localsum",Sum),
-					put("localsize", Size)
+					put("localsize", Size);
+				
+					_Else ->
+					L ="XYZ"
+				
 			end,
 			
 			put("numNodes", length(Pids)),
