@@ -2,13 +2,8 @@
 %%Implementation of Gossip Algorithm to perform variuos computational tasks like Min, Max, Average
 
 -module(gossip).
-<<<<<<< HEAD
 -import(util,[sum/1,sum/2,len/1,minimum/1,maximum/1, log2/1]).
--import (segment,[segfile/2]).
-=======
--import(util,[sum/1,sum/2,len/1,minimum/1,maximum/1]).
--import (segment,[segfile/2,for/3]).
->>>>>>> 8a6941c9825f5d70d9cfe97a08accdf23e36aa6f
+-import (segment,[segfile/2, for/3]).
 -import (network,[getRoutingTable/2,getRoutingTableMesh/2,listAppneder/2]).
 -import (createProc,[getFrag/1,initProc/6]).
 
@@ -33,25 +28,12 @@
 %% Main function
 start(ProcNum,Topology,Itr,FilePath,Function) ->
 Pid = spawn(gossip, calculate, []),
-<<<<<<< HEAD
-%io:format("PID: ~p~n",[Pid]),
-global:register_name(er_calculate, Pid), %Register calculate process
-segfile(FilePath,ProcNum div random:uniform(ProcNum)),
-=======
 io:format("PID: ~p~n",[Pid]),
 global:register_name(er_calculate, Pid),
 segfile(FilePath,ProcNum div 2),
->>>>>>> 8a6941c9825f5d70d9cfe97a08accdf23e36aa6f
 {ok, Filenames} = file:list_dir("./seg/"),
 Frags = length(Filenames),
-initProc(ProcNum,ProcNum,Topology,Function,Frags). %Call the initialising function
-
-<<<<<<< HEAD
-=======
-initProc(ProcNum,ProcNum,Topology,Function,Frags,Itr).
-     %Msg =[1,88,99].
-     %whereis('P_2') ! Msg.
->>>>>>> 8a6941c9825f5d70d9cfe97a08accdf23e36aa6f
+initProc(ProcNum,ProcNum,Topology,Function,Frags,Itr). %Call the initialising function
 
 
 
@@ -84,18 +66,15 @@ threadoperation(Pids, Mydata,SegId, Processname,Itr) ->
 			end,
 			
 			put("numNodes", length(Pids)),
-<<<<<<< HEAD
-			Converge = trunc(log2(length(Pids))),
-		 	Counter = 0,
+			io:format("NuNodes are ~p ~n", [get("numNodes")]),
+			Converge = 200/2,
+			io:format("converge at ~p ~n", [Converge]),
+			Counter = 0,
 			put("converge", Converge),
 			put("counter", Counter),			
 			ConvergedValue = 0,
 			put("converged", ConvergedValue),
-			threadoperation(Pids, Mydata,SegId, Processname);
-=======
-			%io:format("Number of nodes ~p ~n", [len(Pids)]),
-			threadoperation(Pids, Mydata,SegId, Processname,Itr);
->>>>>>> 8a6941c9825f5d70d9cfe97a08accdf23e36aa6f
+			threadoperation(Pids, Mydata,SegId, Processname, Itr);
 		
 		{calculate,Function} ->
 	     		%io:format("Received message to calculate ~p ~n ", [Function]),
@@ -181,7 +160,31 @@ threadoperation(Pids, Mydata,SegId, Processname,Itr) ->
 		%% Yin's code ends here
 
 		{Pid, request, Function, Sum, Size} ->
-		        global:send(Pid, {Processname,reply, Function, get("localsum"), get("localsize")}),% send a reply message with local values	
+		        NewAverage = Sum / Size,
+			LocalAverage= get("localsum") / get("localsize"),
+			 CounterValue = get("counter"),
+			 ConvergeValue = get("converge"),
+			 %io:format("Local Average is ~p New Average is ~p ~n", [LocalAverage, NewAverage]),
+			 Delta = abs(NewAverage - LocalAverage), 
+			 %io:format("Delta is ~p ~n", [Delta]),
+			if Delta  =< 5.0 ->
+				if CounterValue == ConvergeValue ->
+			     		ConvergedValue = 1,
+					put("converged", ConvergedValue),
+			  		io:format("Converged value for ~p at ~p is ~p ~n", [Function,Processname,LocalAverage]);	 
+			     
+                          	true ->
+					Counter = CounterValue + 1,
+                             		erase("counter"),
+                             		put("counter", Counter)
+                       	  	end;
+ 		      	true ->
+                            Count = 0,
+			    erase("counter"),
+                            put("counter", Count)
+		      end,
+
+			global:send(Pid, {Processname,reply, Function, get("localsum"), get("localsize")}),% send a reply message with local values	
 			global:send(er_calculate, {Processname, Function, get("localsum"), Sum, get("localsize"), Size}),
 			threadoperation(Pids, Mydata,SegId,Processname,Itr);	
 	      	  
@@ -192,7 +195,8 @@ threadoperation(Pids, Mydata,SegId, Processname,Itr) ->
 			 if Value == LocalValue ->
 				if CounterValue == ConvergeValue ->
 			     		ConvergedValue = 1,
-					put("converged", ConvergedValue);
+					put("converged", ConvergedValue),
+					io:format("Converged Value for ~p at ~p is ~p ~n", [Function, Processname, LocalValue]);			 
 			     
                           	true ->
 					Counter = CounterValue + 1,
@@ -222,13 +226,8 @@ threadoperation(Pids, Mydata,SegId, Processname,Itr) ->
 
 			
 			global:send(er_calculate, {Processname, Function, get("localsum"), Sum, get("localsize"),Size}),
-<<<<<<< HEAD
-			
-			threadoperation(Pids, Mydata,SegId,Processname);
-=======
 			%io:format("~p: New local sum  is ~p. New local Size is ~p ~n ", [ self(), get("localsum"), get("localsize")]), 
 			threadoperation(Pids, Mydata,SegId,Processname,Itr);
->>>>>>> 8a6941c9825f5d70d9cfe97a08accdf23e36aa6f
 		{Pid, reply, Function, Value} ->
 			case Function of
 				min ->
@@ -247,29 +246,21 @@ threadoperation(Pids, Mydata,SegId, Processname,Itr) ->
 			put("localsum", SumValue),
 			erase("localsize"),
 			put("localsize", SizeValue),
-<<<<<<< HEAD
 			LocalAverage = SumValue / SizeValue,
-			io:format("Average at node ~p is ~p ~n", [Processname, LocalAverage]),
-			threadoperation(Pids, Mydata,SegId,Processname);
+			%io:format("Average at node ~p is ~p ~n", [Processname, LocalAverage]),
+			threadoperation(Pids, Mydata,SegId,Processname, Itr);
 		{timer, Function} ->
 			%io:format("Stared Processing"),
 			ConvergedValue = get("converged"),
 			if ConvergedValue == 1 ->
-			   io:format("~p has converged. Converged Value for ~p is ~p ~n", [Processname, Function, get("Function")]);
+			   io:format("~p has converged.~n", [Processname]);
 			true ->
 				global:send(Processname, {calculate, Function}),
 			     	timer:send_after(500,self(), {timer, Function})
+				%threadoperation(Pids, Mydata,SegId,Processname, Itr)
 			end,
-			threadoperation(Pids, Mydata,SegId,Processname)
+			threadoperation(Pids, Mydata,SegId,Processname, Itr)
 						     					
-=======
-			threadoperation(Pids, Mydata,SegId,Processname,Itr);
-		{timer, Function} ->
-			%io:format("~p Started processing....",[self()]),
-			global:send(Processname, {calculate, Function}),
-			timer:send_after(500,self(), {timer, Function}),
-			threadoperation(Pids, Mydata,SegId,Processname,Itr)			     					
->>>>>>> 8a6941c9825f5d70d9cfe97a08accdf23e36aa6f
 	end.
 
 calculate() ->

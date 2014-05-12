@@ -59,33 +59,19 @@ initProc(Limit,N,Topology,Function,Frag,Itr) ->
      NumNode = length(nodes())+1,
      Evaluation = (Limit rem NumNode),
 	 NodeList = nodes(),
-<<<<<<< HEAD
-       	 FragId = (Limit rem Frag) +1,
-=======
 	 	io:format("Number of Nodes connected to me ~p ~n ", [NumNode]),
 	 	io:format(" Nodes connected to me ~p ~n ", [NodeList]),
         FragId = (Limit rem Frag) +1,
->>>>>>> 8a6941c9825f5d70d9cfe97a08accdf23e36aa6f
        
 	      Lines = getFrag(FragId),
 	      if
 	      Topology == 1  -> Route = getRoutingTable(N,Limit) ;
 	      true -> Route = getRoutingTableMesh(N,Limit)
 	      end,
-<<<<<<< HEAD
-	   
-	   
-=======
 	   %io:format("Adding route is ~p ~n ", [Route]), 
->>>>>>> 8a6941c9825f5d70d9cfe97a08accdf23e36aa6f
 	   if
 	     Evaluation == 0  -> global:register_name(Processname ,spawn_link(gossip , threadoperation , [Route,Lines,FragId, Processname,Itr]));
 	     true ->  global:register_name(Processname ,spawn_link( lists:nth( Evaluation , nodes()),gossip , threadoperation , [Route,Lines,FragId, Processname,Itr]))
      end,
     global:send( Processname , { initialise, Function}),
-<<<<<<< HEAD
-    io:format("Process ~p spawned ~n", [Processname]),		
-     initProc(Limit-1,N,Topology,Function,Frag).
-=======
     initProc(Limit-1,N,Topology,Function,Frag,Itr).
->>>>>>> 8a6941c9825f5d70d9cfe97a08accdf23e36aa6f

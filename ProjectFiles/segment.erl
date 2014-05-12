@@ -1,12 +1,6 @@
 -module(segment).
-<<<<<<< HEAD
--export ([segfile/2]).
-
-%%  Author: Yin Huang
-=======
 -export ([segfile/2,for/3]).
 %%  author: Yin Huang
->>>>>>> 8a6941c9825f5d70d9cfe97a08accdf23e36aa6f
 %%  Input: 1. filename to be segmented for example: ""./data/data.dat"
 %%         2. Size of the chunk (all equal) so the number of fragments = size of data / size of the chunk.
 %%  Output: same size chunks of the original file written to ./seg/F_index
