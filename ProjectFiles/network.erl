@@ -1,9 +1,9 @@
--module(network).
--export([getRoutingTable/2,getRoutingTableMesh/2,listAppneder/2]).
-
-
-%%  author: Shrinivas Kane
+%%Author: Shrinivas Kane
+%%Implementation of Ring and Mesh network.
 %%  N Number of nodes 
+
+-module(network).
+-export([getRoutingTable/2,getRoutingTableMesh/2,listAppender/2]).
 
 
 getRoutingTable(Max,N) ->
@@ -20,14 +20,14 @@ getRoutingTable(Max,N) ->
 	      end,     
 	 Route = [get("Pre"),get("Next")].
 
-listAppneder(0,Route) ->
+listAppender(0,Route) ->
 lists:append(Route, [list_to_atom(string:concat( "P_" ,integer_to_list(0)))]);
 
-listAppneder(N,Route) ->
+listAppender(N,Route) ->
 Route1 = lists:append(Route, [list_to_atom(string:concat( "P_" ,integer_to_list(N)))]),
-listAppneder(N-1,Route1).
+listAppender(N-1,Route1).
 
 getRoutingTableMesh(Max,N) ->
-X = listAppneder(Max,[]),
+X = listAppender(Max,[]),
 X1 = lists:delete(list_to_atom(string:concat( "P_" ,integer_to_list(N))), X).
-%io:format("Route: ~w ~n", [X1]).
+

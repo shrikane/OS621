@@ -32,27 +32,22 @@ initProc(Limit,N,Topology,Function,Frag) ->
     
      Processname = list_to_atom(string:concat( "P_" ,integer_to_list(Limit))),
      put("registeredName", Processname),
-     io:format("name: ~p~n", [get("registeredName")]), 
      NumNode = length(nodes())+1,
      Evaluation = (Limit rem NumNode),
 	 NodeList = nodes(),
-	 	io:format("Number of Nodes connected to me ~p ~n ", [NumNode]),
-	 	io:format(" Nodes connected to me ~p ~n ", [NodeList]),
-       FragId = (Limit rem Frag) +1,
+       	 FragId = (Limit rem Frag) +1,
        
 	      Lines = getFrag(FragId),
-	      %io:format("Data ~p ~n ", [Lines]),
 	      if
 	      Topology == 1  -> Route = getRoutingTable(N,Limit) ;
 	      true -> Route = getRoutingTableMesh(N,Limit)
 	      end,
-	   %io:format("Adding route is ~p ~n ", [Route]), 
 	   
 	   
 	   if
 	     Evaluation == 0  -> global:register_name(Processname ,spawn_link(gossip , threadoperation , [Route,Lines,FragId, Processname]));
 	     true ->  global:register_name(Processname ,spawn_link( lists:nth( Evaluation , nodes()),gossip , threadoperation , [Route,Lines,FragId, Processname]))
      end,
-     %register(Processname ,spawn_link(com , threadoperation , [Route,Lines,FragId])),
     global:send( Processname , { initialise, Function}),
+    io:format("Process ~p spawned ~n", [Processname]),		
      initProc(Limit-1,N,Topology,Function,Frag).

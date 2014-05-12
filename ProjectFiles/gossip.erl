@@ -1,7 +1,8 @@
-
+%%Author: Anuja Kench, Yin 
+%%Implementation of Gossip Algorithm to perform variuos computational tasks like Min, Max, Average
 
 -module(gossip).
--import(util,[sum/1,sum/2,len/1,minimum/1,maximum/1]).
+-import(util,[sum/1,sum/2,len/1,minimum/1,maximum/1, log2/1]).
 -import (segment,[segfile/2]).
 -import (network,[getRoutingTable/2,getRoutingTableMesh/2,listAppneder/2]).
 -import (createProc,[getFrag/1,initProc/5]).
@@ -22,17 +23,18 @@
 % Topology =0 is Mesh	
 % FilePath input data file
 % Function min,max,avg ,update , read 
+
+
+%% Main function
 start(ProcNum,Topology,Itr,FilePath,Function) ->
 Pid = spawn(gossip, calculate, []),
-io:format("PID: ~p~n",[Pid]),
-global:register_name(er_calculate, Pid),
+%io:format("PID: ~p~n",[Pid]),
+global:register_name(er_calculate, Pid), %Register calculate process
 segfile(FilePath,ProcNum div random:uniform(ProcNum)),
 {ok, Filenames} = file:list_dir("./seg/"),
 Frags = length(Filenames),
+initProc(ProcNum,ProcNum,Topology,Function,Frags). %Call the initialising function
 
-initProc(ProcNum,ProcNum,Topology,Function,Frags).
-     %Msg =[1,88,99].
-     %whereis('P_2') ! Msg.
 
 
 
@@ -42,25 +44,22 @@ threadoperation(Pids, Mydata,SegId, Processname) ->
 	put("Pid",Pids),
 	put("Data",Mydata),
 	put("segId",segId),
-	io:format("Initialising ~p ~n",[self()]),
-	
-	
-	receive 
+		
+		receive 
 		{initialise, Function} ->	
-			io:format("Initialising ~p ~n",[self()]),
+			io:format("Initialising ~p ~n",[Processname]),
 			case Function of 
 				min ->
 					Min = minimum(Mydata),
-					put("Function", Min),
-					io:format("Local min is ~p ~n", [Min]);
-				%	io:format("Local value of ~p is ~p ~n", [Function, get("function")])
+					put("Function", Min);
+					%io:format("Local min is ~p ~n", [Min]);
+				
 				max ->
 					Max = maximum(Mydata),
 					put("Function", Max);
 					%io:format("Local max is ~p ~n", [Max]);
-					%io:format("Local value of ~p is ~p ~n", [Function, get("function")]);
+					
 				average ->
-				   io:format("Local Data is ~p ~n", [Mydata]),
 					Sum = sum(Mydata),
 					Size = len(Mydata), 
 					put("localsum",Sum),
@@ -68,47 +67,63 @@ threadoperation(Pids, Mydata,SegId, Processname) ->
 			end,
 			
 			put("numNodes", length(Pids)),
-			%io:format("Number of nodes ~p ~n", [len(Pids)]),
+			Converge = trunc(log2(length(Pids))),
+		 	Counter = 0,
+			put("converge", Converge),
+			put("counter", Counter),			
+			ConvergedValue = 0,
+			put("converged", ConvergedValue),
 			threadoperation(Pids, Mydata,SegId, Processname);
 		
 		{calculate,Function} ->
-	     	io:format("Received message to calculate ~p ~n ", [Function]),
+	     		%io:format("Received message to calculate ~p ~n ", [Function]),
 			random:seed(now()),
 			Random = random:uniform(get("numNodes")),
-			%io:format("Random:~p ",[Random]),
 			Pid = lists:nth(random:uniform(get("numNodes")), Pids), % Select a random node to exchange value
-			%io:format("Sending information to ~p ~n", [Pid]),
 			case Function of
 			  min ->
 				Min = get("Function"),
 				%io:format("Sending msg to :~p ",[Pid]),
 				global:send(Pid,{Processname, request, Function, Min});
-				%Pid ! {self(), request, Function, Min};
+				
 			  max ->
 				Max = get("Function"),
 				global:send(Pid,{Processname, request, Function, Max});
-				%Pid ! {self(), request, Function, Max};
+				
 			  average ->
-	      		global:send (Pid , {Processname,request, Function, get("localsum"), get("localsize")})
+	      		  	global:send (Pid , {Processname,request, Function, get("localsum"), get("localsize")})
 			  end,
 					
 			threadoperation(Pids, Mydata,SegId, Processname);
 
 
 		{Pid, request, Function, Sum, Size} ->
-			io:format("~p Got a request from ~p to calculate ~p. Received sum is ~p. Received size is ~p ~n", [self(),Pid, Function, Sum, Size]),
-	      		global:send(Pid, {Processname,reply, Function, get("localsum"), get("localsize")}),% send a reply message with local values	
+		        global:send(Pid, {Processname,reply, Function, get("localsum"), get("localsize")}),% send a reply message with local values	
 			global:send(er_calculate, {Processname, Function, get("localsum"), Sum, get("localsize"), Size}),
 			threadoperation(Pids, Mydata,SegId,Processname);	
 	      	  
 		{Pid, request, Function, Value} ->
-			%io:format("~p Received a reply from ~p with its local values: ~p ~p  ~n", [self(), Pid, Sum, Size]),
+		        LocalValue = get("Function"),
+			 CounterValue = get("counter"),
+			 ConvergeValue = get("converge"),
+			 if Value == LocalValue ->
+				if CounterValue == ConvergeValue ->
+			     		ConvergedValue = 1,
+					put("converged", ConvergedValue);
+			     
+                          	true ->
+					Counter = CounterValue + 1,
+                             		erase("counter"),
+                             		put("counter", Counter)
+                       	  	end;
+ 		      	true ->
+                            Count = 0,
+			    erase("counter"),
+                            put("counter", Count)
+		      end,
+
 			case Function of
 				min ->
-				%io:format("Value is : ~p  ~n", [Value]),
-				%io:format("Self value : ~p  ~n", [get("Function")]) ,
-				%io:format("er_calc ~p  ~n", [whereis(er_calculate)]),
-				
 					global:send(er_calculate, {Processname, Function, get("Function"), Value}),
 					global:send(Pid, {Processname, reply, Function, get("Function")});
 				max ->
@@ -119,16 +134,16 @@ threadoperation(Pids, Mydata,SegId, Processname) ->
 			threadoperation(Pids, Mydata,SegId,Processname);
 
 		{Pid, reply, Function, Sum, Size} ->
-			%io:format("~p Received a reply from ~p with its local values: ~p ~p  ~n", [self(), Pid, Sum, Size]),
+		       
+
+
+			
 			global:send(er_calculate, {Processname, Function, get("localsum"), Sum, get("localsize"),Size}),
-			%io:format("~p: New local sum  is ~p. New local Size is ~p ~n ", [ self(), get("localsum"), get("localsize")]), 
+			
 			threadoperation(Pids, Mydata,SegId,Processname);
 		{Pid, reply, Function, Value} ->
 			case Function of
 				min ->
-				%io:format("In reply ,Value is : ~p  ~n", [Value]),
-				%io:format("In reply :Self value : ~p  ~n", [get("Function")]) ,
-				%io:format("er_calculate : ~p  ~n", [whereis(er_calculate)]) ,
 				
 					global:send(er_calculate, {Processname, Function, get("Function"), Value});
 				max ->
@@ -144,17 +159,24 @@ threadoperation(Pids, Mydata,SegId, Processname) ->
 			put("localsum", SumValue),
 			erase("localsize"),
 			put("localsize", SizeValue),
+			LocalAverage = SumValue / SizeValue,
+			io:format("Average at node ~p is ~p ~n", [Processname, LocalAverage]),
 			threadoperation(Pids, Mydata,SegId,Processname);
 		{timer, Function} ->
-			%io:format("~p Started processing....",[self()]),
-			global:send(Processname, {calculate, Function}),
-			timer:send_after(500,self(), {timer, Function}),
-			threadoperation(Pids, Mydata,SegId,Processname)			     					
+			%io:format("Stared Processing"),
+			ConvergedValue = get("converged"),
+			if ConvergedValue == 1 ->
+			   io:format("~p has converged. Converged Value for ~p is ~p ~n", [Processname, Function, get("Function")]);
+			true ->
+				global:send(Processname, {calculate, Function}),
+			     	timer:send_after(500,self(), {timer, Function})
+			end,
+			threadoperation(Pids, Mydata,SegId,Processname)
+						     					
 	end.
 
 calculate() ->
-	  	io:format("Received start ~n"),
-	  	
+	  		  	
 receive
 	%start ->
 	  %   io:format("Received start ~n");
@@ -163,12 +185,12 @@ receive
 		case Function of 
 	  	  min -> 
 		     	 Min = erlang:min(Value1, Value2), 	 
-			 io:format("FINAL Minimum value at ~p is ~p ~n", [Pid_proc, Min]),
+			 %io:format("Minimum value at ~p is ~p ~n", [Pid_proc, Min]),
 			 global:send(Pid_proc, {update, Function, Min}),
 			 calculate();
 	   	  max -> 
 		        Max = erlang:max(Value1, Value2),
-		        io:format("FINAL Maximum value at ~p is ~p ~n", [Pid_proc, Max]),
+		        %io:format("FINAL Maximum value at ~p is ~p ~n", [Pid_proc, Max]),
 			global:send(Pid_proc, {update, Function, Max}),
 			calculate()
 		  end;
