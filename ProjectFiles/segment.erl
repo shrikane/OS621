@@ -1,7 +1,12 @@
 -module(segment).
+<<<<<<< HEAD
 -export ([segfile/2]).
 
 %%  Author: Yin Huang
+=======
+-export ([segfile/2,for/3]).
+%%  author: Yin Huang
+>>>>>>> 8a6941c9825f5d70d9cfe97a08accdf23e36aa6f
 %%  Input: 1. filename to be segmented for example: ""./data/data.dat"
 %%         2. Size of the chunk (all equal) so the number of fragments = size of data / size of the chunk.
 %%  Output: same size chunks of the original file written to ./seg/F_index
@@ -14,7 +19,13 @@ for(Max, Max, F) ->
 for(I, Max,F) ->
     [F(I)|for(I+1,Max, F)].
 
-segfile(FileName,N) ->
+
+ segfile(FileName,N) ->
+    filelib:ensure_dir("seg/"),
+    {ok,ChildFiles} = file:list_dir_all("seg"),
+    lists:foreach(fun(Files)->file:delete(string:concat("seg/",Files)) end, ChildFiles),
+    file:del_dir("seg"),
+    file:make_dir("seg"),
     {ok, Binary} = file:read_file(FileName),
     Lines = string:tokens(erlang:binary_to_list(Binary), "\n"),
     MyLists = [ lists:sublist(Lines, X, (length(Lines) div (N))) || X <- lists:seq(1,length(Lines),(length(Lines) div (N))) ],
