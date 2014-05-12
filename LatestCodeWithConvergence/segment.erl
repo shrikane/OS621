@@ -22,7 +22,11 @@ for(I, Max,F) ->
     file:make_dir("seg"),
     {ok, Binary} = file:read_file(FileName),
     Lines = string:tokens(erlang:binary_to_list(Binary), "\n"),
-    MyLists = [ lists:sublist(Lines, X, (length(Lines) div (N))) || X <- lists:seq(1,length(Lines),(length(Lines) div (N))) ],
+    L =length(Lines),
+	if L =< N -> Step = (N div length(Lines));
+	true -> Step = (length(Lines) div N)
+	end,
+    MyLists = [ lists:sublist(Lines, X, Step) || X <- lists:seq(1,length(Lines),Step) ],
      for(1,length(MyLists), fun(Index) ->
 				    filewrite(string:concat("./seg/F_", integer_to_list(Index)),lists:nth(Index,MyLists)),
 	                           io:format("~p has been written to ~p ~n", [FileName,string:concat("./seg/F_", integer_to_list(Index)) ])
