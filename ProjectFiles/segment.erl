@@ -13,7 +13,13 @@ for(Max, Max, F) ->
 for(I, Max,F) ->
     [F(I)|for(I+1,Max, F)].
 
-segfile(FileName,N) ->
+
+ segfile(FileName,N) ->
+    filelib:ensure_dir("seg/"),
+    {ok,ChildFiles} = file:list_dir_all("seg"),
+    lists:foreach(fun(Files)->file:delete(string:concat("seg/",Files)) end, ChildFiles),
+    file:del_dir("seg"),
+    file:make_dir("seg"),
     {ok, Binary} = file:read_file(FileName),
     Lines = string:tokens(erlang:binary_to_list(Binary), "\n"),
     %io:format("~p~n",[Lines]),
