@@ -2,14 +2,14 @@
 
 -module(gossip).
 -import(util,[sum/1,sum/2,len/1,minimum/1,maximum/1]).
--import (segment,[segfile/2]).
+-import (segment,[segfile/2,for/3]).
 -import (network,[getRoutingTable/2,getRoutingTableMesh/2,listAppneder/2]).
--import (createProc,[getFrag/1,initProc/5]).
+-import (createProc,[getFrag/1,initProc/6]).
 
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([start/5, threadoperation/4,calculate/0]).
+-export([start/5, threadoperation/5,calculate/0]).
 
 
 
@@ -26,18 +26,18 @@ start(ProcNum,Topology,Itr,FilePath,Function) ->
 Pid = spawn(gossip, calculate, []),
 io:format("PID: ~p~n",[Pid]),
 global:register_name(er_calculate, Pid),
-segfile(FilePath,ProcNum div random:uniform(ProcNum)),
+segfile(FilePath,ProcNum div 2),
 {ok, Filenames} = file:list_dir("./seg/"),
 Frags = length(Filenames),
 
-initProc(ProcNum,ProcNum,Topology,Function,Frags).
+initProc(ProcNum,ProcNum,Topology,Function,Frags,Itr).
      %Msg =[1,88,99].
      %whereis('P_2') ! Msg.
 
 
 
 %Main Function for threads
-threadoperation(Pids, Mydata,SegId, Processname) ->
+threadoperation(Pids, Mydata,SegId, Processname,Itr) ->
 	
 	put("Pid",Pids),
 	put("Data",Mydata),
@@ -69,7 +69,7 @@ threadoperation(Pids, Mydata,SegId, Processname) ->
 			
 			put("numNodes", length(Pids)),
 			%io:format("Number of nodes ~p ~n", [len(Pids)]),
-			threadoperation(Pids, Mydata,SegId, Processname);
+			threadoperation(Pids, Mydata,SegId, Processname,Itr);
 		
 		{calculate,Function} ->
 	     	io:format("Received message to calculate ~p ~n ", [Function]),
@@ -92,14 +92,75 @@ threadoperation(Pids, Mydata,SegId, Processname) ->
 	      		global:send (Pid , {Processname,request, Function, get("localsum"), get("localsize")})
 			  end,
 					
-			threadoperation(Pids, Mydata,SegId, Processname);
-
+			threadoperation(Pids, Mydata,SegId, Processname,Itr);
+		%% yin's code
+		 {read, RequestSegId, Source} ->
+		         io:format("Current Process is ~p~n Received a read request from ~p with ID ~p~n", [self(),Source, RequestSegId]),
+%		         io:format("Registered: ~p~n",[registered()]),
+		     OldValue = get("Iteration"),
+                     io:format("Itr number: ~p~n",[OldValue]),
+		       if OldValue > 0 ->
+		         Id = atom_to_list(RequestSegId),
+		         IntegerId = list_to_integer(Id),
+		         io:format("Requested Id is ~p~n",[Id]),
+		         io:format("My Id lists is ~w~n",[get("segId")]),
+		         io:format("True or false: ~p~n",[lists:member(Id, [get("segId")])]),
+				 case lists:member(IntegerId, [get("segId")]) of
+				     true ->
+					 MyValue = get("Data"),
+					 %Source ! {readreply, self(), MyValue };
+					 global:send(Source, {readreply, self(), MyValue });
+				     false ->
+					% io:format("Itr number: ~p~n",[OldValue]),
+					 NeighborNum = random:uniform(get("numNodes")),
+					 io:format("Not found local, send a rumor to neighor! The random number is ~p~n",[NeighborNum]),
+					 RandomNeighbor = lists:nth(NeighborNum, Pids),
+				%	RandomNeighbor ! {read, RequestSegId, Source}	  
+				global:send(RandomNeighbor,{read,RequestSegId,Source})
+				     end,
+			erase("Iteration"),
+			NewValue = OldValue -1,
+			put("Iteration", NewValue),
+				   io:format("new iteration number is ~w~n",[get("Iteration")])
+			       
+				   end,
+	                 	threadoperation(Pids, Mydata, SegId, Processname, Itr);
+		
+		 {readreply,From, Values} ->
+		io:format("Your read request has a reply: ~p from ~p~n",[Values, From]);
+		
+		  {write, TargetSegmentation, UpdatedValues} ->
+		 %      OldItr = get("Iteration"),
+		% io:format("Itr number: ~p~n",[OldItr]),
+		  %    if OldItr > 0 ->
+		       YourRequestSegId = atom_to_list(TargetSegmentation),
+                        YourIntegerId = list_to_integer(YourRequestSegId),
+		       case lists:member(YourIntegerId, [get("segId")]) of
+			   true ->
+			       io:format("*****************Current thread ~p should be update!*****************~n
+			       Before update the file has the value: ~p~n*****************************************~n",[self(),get("Data")]),
+			       erase("Data"),
+			       put("Data", UpdatedValues),
+			       io:format("****************Requested Id: ~p has been updated to:****************~n
+			       ~p ~n***********************************~n",[YourIntegerId, get("Data")]);
+			   false ->
+			       for(1,Itr,fun(Index) ->
+                                 io:format("Itr number: ~p~n",[Index]),
+                                 NeighborNum2 = random:uniform(get("numNodes")),
+                                 io:format("Not found local, send a rumor to neighor! The random number is ~p~n",[NeighborNum2]),
+                                 RandomNeighbor2 = lists:nth(NeighborNum2, Pids),
+			       %RandomNeighbor2 ! {write, TargetSegmentation, UpdatedValues}
+			       global:send(RandomNeighbor2,{write, TargetSegmentation, UpdatedValues})
+					    end)
+		       end,
+		threadoperation(Pids, Mydata,SegId, Processname, Itr);
+		%% Yin's code ends here
 
 		{Pid, request, Function, Sum, Size} ->
 			io:format("~p Got a request from ~p to calculate ~p. Received sum is ~p. Received size is ~p ~n", [self(),Pid, Function, Sum, Size]),
 	      		global:send(Pid, {Processname,reply, Function, get("localsum"), get("localsize")}),% send a reply message with local values	
 			global:send(er_calculate, {Processname, Function, get("localsum"), Sum, get("localsize"), Size}),
-			threadoperation(Pids, Mydata,SegId,Processname);	
+			threadoperation(Pids, Mydata,SegId,Processname,Itr);	
 	      	  
 		{Pid, request, Function, Value} ->
 			%io:format("~p Received a reply from ~p with its local values: ~p ~p  ~n", [self(), Pid, Sum, Size]),
@@ -116,13 +177,13 @@ threadoperation(Pids, Mydata,SegId, Processname) ->
 					global:send(Pid, {Processname, reply, Function, get("Function")})
 			end,
 			%io:format("~p: New local sum  is ~p. New local Size is ~p ~n ", [ self(), get("localsum"), get("localsize")]), 
-			threadoperation(Pids, Mydata,SegId,Processname);
+			threadoperation(Pids, Mydata,SegId,Processname,Itr);
 
 		{Pid, reply, Function, Sum, Size} ->
 			%io:format("~p Received a reply from ~p with its local values: ~p ~p  ~n", [self(), Pid, Sum, Size]),
 			global:send(er_calculate, {Processname, Function, get("localsum"), Sum, get("localsize"),Size}),
 			%io:format("~p: New local sum  is ~p. New local Size is ~p ~n ", [ self(), get("localsum"), get("localsize")]), 
-			threadoperation(Pids, Mydata,SegId,Processname);
+			threadoperation(Pids, Mydata,SegId,Processname,Itr);
 		{Pid, reply, Function, Value} ->
 			case Function of
 				min ->
@@ -134,22 +195,22 @@ threadoperation(Pids, Mydata,SegId, Processname) ->
 				max ->
 					global:send(er_calculate, {Processname, Function, get("Function"), Value})
 			end,	
-					threadoperation(Pids, Mydata,SegId,Processname);
+					threadoperation(Pids, Mydata,SegId,Processname,Itr);
 		{update, Function, Value} ->
 			erase("Function"),
 			put("Function", Value),
-			threadoperation(Pids, Mydata,SegId, Processname);
+			threadoperation(Pids, Mydata,SegId, Processname,Itr);
 		{update, Function, localsum, SumValue, localsize, SizeValue} ->
 			erase("localsum"),
 			put("localsum", SumValue),
 			erase("localsize"),
 			put("localsize", SizeValue),
-			threadoperation(Pids, Mydata,SegId,Processname);
+			threadoperation(Pids, Mydata,SegId,Processname,Itr);
 		{timer, Function} ->
 			%io:format("~p Started processing....",[self()]),
 			global:send(Processname, {calculate, Function}),
 			timer:send_after(500,self(), {timer, Function}),
-			threadoperation(Pids, Mydata,SegId,Processname)			     					
+			threadoperation(Pids, Mydata,SegId,Processname,Itr)			     					
 	end.
 
 calculate() ->

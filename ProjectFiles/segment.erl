@@ -1,5 +1,5 @@
 -module(segment).
--export ([segfile/2]).
+-export ([segfile/2,for/3]).
 %%  author: Yin Huang
 %%  Input: 1. filename to be segmented for example: ""./data/data.dat"
 %%         2. Size of the chunk (all equal) so the number of fragments = size of data / size of the chunk.
