@@ -42,6 +42,9 @@ Section VI Conclusion
 In this project, we have successfully implemented Gossip-based aggregation and data update and retrieval for a large distributed system using Erlang. The three computational tasks have been demonstrated in terms of efficiency, effectiveness and accuracy. We have compared the convergence performance of gossip in different types of networks, say ring and mesh, and different sizes of networks. 
 
 Section VII Future work
-1.	Use quorum approach to deal with the mutual exclusion problem caused by multiple access to the same fragmentations. 
-2.	
-3.	
+Future work:
+Improvements in retrieve-update
+Current implementation uses write all read one strategy. It has performance overhead of writing data to all replicas for each write request. Thus we recommend following improvements as a future work 
+1. Distributed Name node: Few nodes will contain mapping list of fragment id for each registered node. Although this implementation may suffer contention on name node. This can be implemented for faster writes by using write once and read latest strategy. 
+2. Quorum based retrieve-read: This implementation uses mutual exclusion principle along with write once, read latest strategy. Which means while updating, data is written on any node in update quorum instead of all nodes which contains replica. On the other hand while reading, node selects most updated copy of data form quorum. This ensures less contention and better performance.
+
