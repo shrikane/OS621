@@ -1,0 +1,37 @@
+Introduction
+•	Background on distributed programming
+o	Short history on distributed programming and its beginnings 
+o	Introduction to distributed systems
+o	Introduction to gossip in distributed systems 
+•	Introduction to Erlang programming 
+o	Uses 
+o	Benefits over other languages 
+o	Drawbacks 
+•	Problem being addressed 
+o	Fragmentation of files across a distributed system 
+o	Trade off of accuracy for latency and communication costs (the issues and benefits of this)
+o	Computation of minimum value, maximum value, computing average values, updating contents (writing), reading values
+Application
+•	System setup 
+o	VM’s used (OS, processors, memory allotted for each VM, OS of the host machine, total memory of host, what kind of hard drive was used)
+•	Erlang code implementation 
+o	Network structure description and diagrams
+	MESH
+	Ring structure 
+	Why we chose a ring structure over other choices 
+o	Logic of 
+	Mean, max, average
+	Read, update, write
+•	Performance Results 
+o	Graph of time to execute vs number of nodes in the system
+	Also specify how many network machines were used per test
+	A graph for each function (min, max, average) using data from both networks
+o	Discussion of the performance results 
+•	Problems Encountered 
+o	Some abnormalities in Erlang we had 
+o	Issues with the distributed setting (maintaining information, processes, etc)
+Conclusion
+•	Describe conclusions on our solution to the problems 
+•	Highlight main points of the implementation that were good, and flaws in the implementation 
+•	Discuss possible future work  
+References 
