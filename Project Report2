@@ -36,6 +36,26 @@ Another problem with this design is that we are not able to guarantee that a rea
 Section IV Results 
 
 Section V Analysis and discussion
+
+%%Shrinivas
+
+
+
+Graph 1 : http://jsfiddle.net/DrVD2/2/
+Graph 2 : http://jsfiddle.net/yMLFn/2/
+Graph 3 : http://jsfiddle.net/62Rgw/1/
+ 
+
+Experiment analysis Results:
+We conducted experiments on Ring and fully connected (Mesh) topology with different parameters. Following graph shows output of these experiments. 
+Firstly, number of messages sent while gossiping is approximately same for minimum, maximum, average computation for specific topology.
+Secondly, Average calculation in ring topology took long time compared to mesh topology even for 100 nodes. Additionally in average calculation error factor goes on increasing as number of nodes goes on increasing.
+Finally, due to randomness in node selection in gossip converged value for average computation differ in each round.
+
+Please feel free to add or edit results :)
+%% end Shrinivas
+
+
 Problem 1 Consistency
 Solution: a. 
 Section VI Conclusion
