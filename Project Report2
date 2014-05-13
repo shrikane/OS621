@@ -103,3 +103,11 @@ Current implementation uses write all read one strategy. It has performance over
 1. Distributed Name node: Few nodes will contain mapping list of fragment id for each registered node. Although this implementation may suffer contention on name node. This can be implemented for faster writes by using write once and read latest strategy. 
 2. Quorum based retrieve-read: This implementation uses mutual exclusion principle along with write once, read latest strategy. Which means while updating, data is written on any node in update quorum instead of all nodes which contains replica. On the other hand while reading, node selects most updated copy of data form quorum. This ensures less contention and better performance.
 
+Section XIII References 
+Tanenbaum, Andrew S., and Maarten Van. Steen. Distributed Systems: Principles and Paradigms. Upper Saddle River: Pearson Prentice Hall, 2007. Print.
+
+Armstrong, Joe. Programming Erlang: Software for a Concurrent World. Raleigh, NC: Pragmatic helf, 2007. Print.
+
+Demers, Alan. Epidemic Algorithms for Replicated Database Maintenance. Palo Alto, Calif: XEROX Corp., Palo Alto Research Center, 1989. Print.
+
+
