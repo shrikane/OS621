@@ -51,7 +51,10 @@ Graph 3 : http://jsfiddle.net/62Rgw/1/
  
 
 Experiment analysis Results:
-We conducted experiments on Ring and fully connected (Mesh) topology with different parameters using input file conataining 3000 random floating point numbers.Following graph shows output of these experiments. 
+We conducted experiments on Ring and fully connected (Mesh) topology with different parameters.Following graph shows output of experiments using following configration.
+a. Varied number of nodes from 10 to 2000
+b. Used 3000 random floating point number
+
 Firstly, number of messages sent while gossiping is approximately same for minimum, maximum, average computation for specific topology.
 Secondly, Average calculation in ring topology took long time compared to mesh topology even for 100 nodes. Additionally in average calculation error factor goes on increasing as number of nodes goes on increasing.
 Finally, due to randomness in node selection in gossip converged value for average computation may differ in each round.
