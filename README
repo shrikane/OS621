@@ -1,0 +1,67 @@
+*************************************************************************************************************
+Author: Abhishek Sethi
+Modified by Yin Huang
+Date: 5-13-2014
+
+Note: If you wanna test the performance in multiple machines please go through the following steps 1-9 below.
+**************************************************************************************************************
+!!!!!!!!!!!!!!!!To start the program, you can use the following command:!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+gossip:start(N,T,ITR,"Input FIle Path",operation).
+*******************************************************************************************************************************
+N 	:   			Number of nodes to be created + 1 (In other words N+1 nodes will be created)
+T  	:				Topology. Mesh: 0; Ring: 1. (Please note ring topology is used for experiments and not fully supported)
+ITR : 				Number of iterations to used while read/retrieve operations   
+"Input file path": 	Input file path for data file. If you don't have any use "data.dat"
+operation : 		min,max,average,read,write  Update and retrieve operation are combined as a single operation as a write operation. 
+           
+*******************************************************************************************************************************
+
+For example:
+
+gossip:start(5,1,5,"data.dat",read).
+
+Will spawn 6 processes and choose Mesh network with 5 iterations for read gossip until the first match is found, it will stop.
+IMPORTANT: When prompted to enter Process ID to start, please enter "P_#", and the # should be with the range from [0, N]
+		    And then you will be asked to enter the segmentation ID, an integer number. !!!!!!!!please ensure the ID is a valid number!!!! 
+	
+		Read operation will return the first match and it will done.
+		Write operation will run ITR times specified by the user.
+	!!!!!!!!!!!!!if you wanna check the updated value, wait for a few moments until the write is done, you will be asked to do so!!!!!!!!!
+*******************************************************************************************************************************************
+Running the Erlang program across multiple machines: 
+
+1. Ensure that both machines are on the same network (can be pinged using the ping command).
+
+2. Create a file called '.erlang.cookie' in the home directory on each network machine 
+that will be used. (For Linux, this is the directory when you type in the command 'cd', 
+and for Windows, and $HOME environment variable needs to be set instead). 
+
+3. The file contents should be the same across all the machines. The specific contents used 
+in our testing was "this_is_very_secret", and that file was copied to all the network 
+machines. 
+
+4. Starting with machine 1 (the machine which will initiate the script), enable the erlang
+shell on that machine using the command "erl -name node1@[machine 1's IP address here]". 
+
+5. On subsequent network machines (machines 2, 3,....,N), enable the shell using the command
+"erl -name nodeN@[machine N's IP address here]". So machine 2 would be: "erl -name node2@[machine
+2's IP address]". 
+
+6. From machine 1, execute the command "net_adm:ping('nodeN@[machine N's IP address').". The
+terminal should print out "pong" if successful, but will print out "pang" if the ping was
+unsuccessful. Repeat this command for each of the N network machines that will be used. 
+
+7. Confirm that the nodes are all connected by executing "nodes().". This should print out 
+all the machines connected to the current machine.
+
+8. Compile the Erlang script using the command "c([ERLANG SCRIPT NAME]).". An ok message
+should be printed at the bottom of the output. 
+
+9. Execute the script from machine 1 using the command 
+"[ERLANG SCRIPT NAME]:start(PARAMETERS)". 
+
+NOTE: Once the program begins executing in step 9, the output is only the initialization 
+of all the nodes across various network machines. Output for the computational tasks is 
+not done until all the processes have initialized AND the computation has converged 
+appropriately. Then each node will output it's converged value. 
